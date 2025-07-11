@@ -1,8 +1,8 @@
-import os
+import tkinter as tk
+from tkinter import colorchooser
 import psutil
 import GPUtil
 
-# ASCII арт —
 ASCII_ART = r"""
                 _..._
               .'     '.      _
@@ -23,48 +23,76 @@ ASCII_ART = r"""
 """
 
 def get_cpu_load():
-    """
-    Получает текущую загрузку CPU в процентах.
-    :return: загрузка CPU (float)
-    """
-    return psutil.cpu_percent(interval=1)
+    return psutil.cpu_percent(interval=None)
 
 def get_gpu_load():
-    """
-    Получает текущую загрузку всех доступных GPU в процентах.
-    :return: список загрузок GPU (list of float) или None, если GPU не обнаружены
-    """
     gpus = GPUtil.getGPUs()
     if not gpus:
         return None
-    gpu_loads = [gpu.load * 100 for gpu in gpus]
-    return gpu_loads
+    return [gpu.load * 100 for gpu in gpus]
 
-def main():
-    # Очистка консоли для операционных систем Windows ('cls') или Linux/macOS ('clear')
-    os.system('cls' if os.name == 'nt' else 'clear')
+class SystemMonitorApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Open-Space Monitor by 1nspect0r1")
+        self.geometry("600x500")
+        self.configure(bg="black")
 
-    # Вывод ASCII-арта космонавта
-    print(ASCII_ART)
+        # Иконка .ico (если есть)
+        try:
+            self.iconbitmap("icon.ico")
+        except Exception:
+            pass  # если иконка не найдена, просто игнорируем
 
-    print(f"\nДобро пожаловать в открытый космос!\n")
+        # ASCII-арт в Label с моноширинным шрифтом
+        self.ascii_label = tk.Label(self, text=ASCII_ART, font=("Courier", 10), fg="cyan", bg="black", justify=tk.LEFT, anchor="nw")
+        self.ascii_label.pack(pady=10, fill='both', expand=False)
 
-    # Получение и вывод загрузки CPU
-    cpu_load = get_cpu_load()
-    print(f"Нагрузка CPU: {cpu_load:.1f}%")
+        # Кнопка для открытия окна настроек цвета ASCII-арта
+        settings_btn = tk.Button(self, text="Настройки цвета ASCII-арта", command=self.open_color_settings,
+                                 bg='black', fg='white', activebackground='gray20', activeforeground='white', bd=0, highlightthickness=0)
+        settings_btn.pack(pady=5)
 
-    # Получение и вывод загрузки GPU
-    gpu_loads = get_gpu_load()
-    if gpu_loads is None:
-        print("GPU не обнаружен или данные недоступны.")
-    else:
-        # Выводим нагрузку для каждой обнаруженной GPU
-        for i, load in enumerate(gpu_loads):
-            print(f"Нагрузка GPU #{i+1}: {load:.1f}%")
+        # Приветствие
+        self.welcome_label = tk.Label(self, text="Добро пожаловать в открытый космос!", font=("Arial", 14), fg="white", bg="black")
+        self.welcome_label.pack(pady=5)
 
-    # Ожидание нажатия Enter перед закрытием консоли, чтобы пользователь успел прочитать информацию
-    print("\nНажмите Enter для выхода...")
-    input()
+        # Метки для нагрузки CPU и GPU
+        self.cpu_label = tk.Label(self, text="", font=("Arial", 12), fg="white", bg="black")
+        self.cpu_label.pack(pady=5, anchor='w')
+
+        self.gpu_label = tk.Label(self, text="", font=("Arial", 12), fg="white", bg="black")
+        self.gpu_label.pack(pady=5, anchor='w')
+
+        # Добавляем ссылку на GitHub внизу справа
+        self.github_link = tk.Label(self, text="GitHub: github.com/1nspect0r1", fg="cyan", bg="black", cursor="hand2",
+                                    font=("Arial", 10, "underline"))
+        self.github_link.place(relx=1.0, rely=1.0, anchor='se', x=-10, y=-10)  # отступы от правого нижнего угла
+        self.github_link.bind("<Button-1>", lambda e: webbrowser.open_new("https://github.com/1nspect0r1"))
+
+        # Запускаем обновление данных
+        self.update_load()
+
+    def open_color_settings(self):
+        # Окно выбора цвета
+        color = colorchooser.askcolor(title="Выберите цвет текста ASCII-арта", initialcolor=self.ascii_label.cget("fg"))
+        if color and color[1]:
+            self.ascii_label.config(fg=color[1])
+
+    def update_load(self):
+        cpu_load = get_cpu_load()
+        self.cpu_label.config(text=f"Нагрузка CPU: {cpu_load:.1f}%")
+
+        gpu_loads = get_gpu_load()
+        if gpu_loads is None:
+            self.gpu_label.config(text="GPU не обнаружен или данные недоступны.")
+        else:
+            gpu_text = "\n".join([f"Нагрузка GPU #{i+1}: {load:.1f}%" for i, load in enumerate(gpu_loads)])
+            self.gpu_label.config(text=gpu_text)
+
+        self.after(1000, self.update_load)
+
 
 if __name__ == "__main__":
-    main()
+    app = SystemMonitorApp()
+    app.mainloop()
